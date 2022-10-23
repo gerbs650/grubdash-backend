@@ -10,6 +10,7 @@ const nextId = require("../utils/nextId");
 
 // TODO: Implement the /orders handlers needed to make the tests pass
 
+// ensure order exists and ID matches to start
 const orderExists = (req, res, next) => {
   const { orderId } = req.params;
   res.locals.orderId = orderId;
@@ -23,6 +24,7 @@ const orderExists = (req, res, next) => {
   res.locals.order = foundOrder;
 };
 
+// deliver to address is valid
 const orderValidDeliverTo = (req, res, next) => {
   const { data = null } = req.body;
   res.locals.newOD = data;
@@ -35,6 +37,7 @@ const orderValidDeliverTo = (req, res, next) => {
   }
 };
 
+// order has valid phone number
 const orderHasValidMobileNumber = (req, res, next) => {
   const orderMobileNumber = res.locals.newOD.mobileNumber;
   if (!orderMobileNumber || orderMobileNumber.length === 0) {
@@ -45,6 +48,7 @@ const orderHasValidMobileNumber = (req, res, next) => {
   }
 };
 
+// order has dishes before submitting
 const orderHasDishes = (req, res, next) => {
   const orderDishes = res.locals.newOD.dishes;
   if (!orderDishes || !Array.isArray(orderDishes) || orderDishes.length <= 0) {
@@ -56,6 +60,7 @@ const orderHasDishes = (req, res, next) => {
   res.locals.dishes = orderDishes;
 };
 
+//order has a number of 1 dish
 const orderHasValidDishes = (req, res, next) => {
   const orderDishes = res.locals.dishes;
   orderDishes.forEach((dish) => {
@@ -71,6 +76,7 @@ const orderHasValidDishes = (req, res, next) => {
   });
 };
 
+// order id matches
 const orderIdMatches = (req, res, next) => {
   const paramId = res.locals.orderId;
   const { id = null } = res.locals.newOD;
@@ -84,6 +90,37 @@ const orderIdMatches = (req, res, next) => {
   }
 };
 
+//
+
+function validateStatus(req, res, next) {
+  const { orderId } = req.params;
+  const { data: { id, status } = {} } = req.body;
+
+  let message;
+  if (id && id !== orderId)
+    message = `Order id does not match route id. Order: ${id}, Route: ${orderId}`;
+  else if (
+    !status ||
+    status === "" ||
+    (status !== "pending" &&
+      status !== "preparing" &&
+      status !== "out-for-delivery")
+  )
+    message =
+      "Order must have a status of pending, preparing, out-for-delivery, delivered";
+  else if (status === "delivered")
+    message = "A delivered order cannot be changed";
+
+  if (message) {
+    return next({
+      status: 400,
+      message: message,
+    });
+  }
+
+  next();
+}
+/*
 const incomingStatusIsValid = (req, res, next) => {
   const { status = null } = res.locals.newOD;
   if (!status || status.length === 0 || status === "invalid") {
@@ -114,6 +151,7 @@ const extantStatusIsPending = (req, res, next) => {
     });
   }
 };
+*/
 
 //Combined Middleware Functions to make the exports more clean.
 const createValidation = (req, res, next) => {
@@ -136,14 +174,13 @@ const updateValidation = (req, res, next) => {
   orderHasDishes(req, res, next);
   orderHasValidDishes(req, res, next);
   orderIdMatches(req, res, next);
-  incomingStatusIsValid(req, res, next);
-  extantStatusIsValid(req, res, next);
+  validateStatus(req, res, next);
   next();
 };
 
 const deleteValidation = (req, res, next) => {
   orderExists(req, res, next);
-  extantStatusIsPending(req, res, next);
+  validateDelete(req, res, next);
   next();
 };
 
@@ -192,6 +229,17 @@ function destroy(req, res) {
   const index = orders.indexOf(res.locals.order);
   orders.splice(index, 1);
   res.sendStatus(204);
+}
+
+function validateDelete(req, res, next) {
+  if (res.locals.order.status !== "pending") {
+    return next({
+      status: 400,
+      message: "An order cannot be deleted unless it is pending",
+    });
+  }
+
+  next();
 }
 
 module.exports = {
