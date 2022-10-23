@@ -6,12 +6,12 @@ const orders = require(path.resolve("src/data/orders-data"));
 // Use this function to assigh ID's when necessary
 const nextId = require("../utils/nextId");
 
-const notFound = require("../errors/notFound");
+// const notFound = require("../errors/notFound"); -- not used, wrote errors within functions.
 
 // TODO: Implement the /orders handlers needed to make the tests pass
 
 const orderExists = (req, res, next) => {
-  const orderId = req.params.orderId;
+  const { orderId } = req.params;
   res.locals.orderId = orderId;
   const foundOrder = orders.find((order) => order.id === orderId);
   if (!foundOrder) {
@@ -115,7 +115,7 @@ const extantStatusIsPending = (req, res, next) => {
   }
 };
 
-//Combined Middleware Functions
+//Combined Middleware Functions to make the exports more clean.
 const createValidation = (req, res, next) => {
   orderValidDeliverTo(req, res, next);
   orderHasValidMobileNumber(req, res, next);
@@ -148,31 +148,46 @@ const deleteValidation = (req, res, next) => {
 };
 
 //CRUD Handlers:
+// create handler has been updated - POST
 function create(req, res) {
-  const newOrderData = res.locals.newOD;
-  newOrderData.id = nextId();
-  orders.push(newOrderData);
-  res.status(201).json({ data: newOrderData });
+  const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body;
+  const newOrder = {
+    id: nextId(),
+    deliverTo: deliverTo,
+    mobileNumber: mobileNumber,
+    status: status ? status : "pending",
+    dishes: dishes,
+  };
+  orders.push(newOrder);
+  res.status(201).json({ data: newOrder });
 }
 
+// read handler
 function read(req, res) {
   res.status(200).json({ data: res.locals.order });
 }
 
+// update handler has been updated to have a id not overwritten.
 function update(req, res) {
-  const newData = res.locals.newOD;
-  const oldData = res.locals.order;
-  const index = orders.indexOf(oldData);
-  for (const key in newData) {
-    orders[index][key] = newData[key];
-  }
-  res.status(200).json({ data: orders[index] });
+  const { data: { deliverTo, mobileNumber, dishes, status } = {} } = req.body;
+
+  res.locals.order = {
+    id: res.locals.order.id,
+    deliverTo: deliverTo,
+    mobileNumber: mobileNumber,
+    dishes: dishes,
+    status: status,
+  };
+
+  res.json({ data: res.locals.order });
 }
 
+// list handler
 function list(req, res) {
   res.status(200).json({ data: orders });
 }
 
+// delete handler
 function destroy(req, res) {
   const index = orders.indexOf(res.locals.order);
   orders.splice(index, 1);
