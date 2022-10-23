@@ -34,6 +34,7 @@ const dishExists = (req, res, next) => {
 //   };
 // }
 
+// ensures dishes have valid name during entry
 const dishValidName = (req, res, next) => {
   const { data = null } = req.body;
   res.locals.newD = data;
@@ -46,6 +47,7 @@ const dishValidName = (req, res, next) => {
   }
 };
 
+// ensures dishes have a description
 const dishHasValidDescription = (req, res, next) => {
   const dishDescription = res.locals.newD.description;
   if (!dishDescription || dishDescription.length === 0) {
@@ -56,6 +58,7 @@ const dishHasValidDescription = (req, res, next) => {
   }
 };
 
+// new dish has a price
 const dishHasValidPrice = (req, res, next) => {
   const dishPrice = res.locals.newD.price;
   if (!dishPrice || typeof dishPrice != "number" || dishPrice <= 0) {
@@ -66,6 +69,7 @@ const dishHasValidPrice = (req, res, next) => {
   }
 };
 
+// makes sure dish has img with URL
 const dishHasValidImage = (req, res, next) => {
   const dishImage = res.locals.newD.image_url;
   if (!dishImage || dishImage.length === 0) {
@@ -87,7 +91,7 @@ const dishIdMatches = (req, res, next) => {
   }
 };
 
-// Middleware Functions
+// Middleware Functions to clean up module.exports.
 const createValidation = (req, res, next) => {
   dishValidName(req, res, next);
   dishHasValidDescription(req, res, next);
@@ -112,6 +116,8 @@ const updateValidation = (req, res, next) => {
 };
 
 //CRUD Handlers:
+
+// create function
 function create(req, res) {
   const { data: { name, description, price, image_url } = {} } = req.body;
   const newDish = {
@@ -126,10 +132,12 @@ function create(req, res) {
   res.status(201).json({ data: newDish });
 }
 
+// read function
 function read(req, res) {
   res.status(200).json({ data: res.locals.dish });
 }
 
+// update function
 function update(req, res) {
   const { data: { name, description, price, image_url } = {} } = req.body;
   res.locals.dish = {
@@ -142,6 +150,7 @@ function update(req, res) {
   res.json({ data: res.locals.dish });
 }
 
+// list function
 function list(req, res) {
   res.status(200).json({ data: dishes });
 }
